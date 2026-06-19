@@ -1,0 +1,21 @@
+# s&box build output
+.addon/
+bin/
+obj/
+
+# s&box editor state + compiled assets
+.sbox/
+*_c
+*_d
+Assets/**/*_c
+
+# IDE
+.vs/
+.vscode/
+*.user
+*.suo
+**/Properties/launchSettings.json
+
+# OS
+.DS_Store
+Thumbs.db
