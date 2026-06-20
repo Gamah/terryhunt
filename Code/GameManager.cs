@@ -23,10 +23,10 @@ public sealed class GameManager : Component
 	[Property] public float CrossRange { get; set; } = 260f;
 
 	/// <summary>Sideways launch speed carrying a Terry across the view, in units/second.</summary>
-	[Property] public float CrossSpeed { get; set; } = 1200f;
+	[Property] public float CrossSpeed { get; set; } = 700f;
 
 	/// <summary>Upward launch speed that lobs a Terry into the air, in units/second.</summary>
-	[Property] public float LaunchUpSpeed { get; set; } = 2000f;
+	[Property] public float LaunchUpSpeed { get; set; } = 1100f;
 
 	/// <summary>How much to randomize each launch vector, skeet-style (0 = identical lobs).</summary>
 	[Property, Range( 0f, 1f )] public float LaunchSpread { get; set; } = 0.3f;
