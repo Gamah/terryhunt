@@ -119,11 +119,7 @@
       "Components": [
         {
           "__type": "TerryHunt.GameManager",
-          "__guid": "07feb79d-f699-4e4d-9ca1-48bc0371158a",
-          "FloorColor": "0.22,0.24,0.28,1",
-          "FloorSize": 2000,
-          "FloorThickness": 20,
-          "SpawnDistance": 160
+          "__guid": "07feb79d-f699-4e4d-9ca1-48bc0371158a"
         }
       ]
     }
