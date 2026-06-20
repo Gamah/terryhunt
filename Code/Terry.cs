@@ -1,10 +1,13 @@
+using Sandbox.Citizen;
+
 namespace TerryHunt;
 
 /// <summary>
-/// A "Terry" — a citizen launched across the arena waiting to be clicked. Builds its
-/// own model + capsule collider on start and tags itself "terry" so <see cref="TerryHunter"/>
-/// can identify a crosshair hit. The spawner gives him a sideways <see cref="Velocity"/>
-/// so he slides across the screen; click him and he bursts into his gibs.
+/// A "Terry" — a citizen launched into the air to be shot down. Builds his own model +
+/// capsule collider on start, plays a running animation, and tags himself "terry" so
+/// <see cref="TerryHunter"/> can identify a crosshair hit. The spawner gives him a launch
+/// <see cref="Velocity"/> and he arcs through the air under <see cref="Gravity"/>; click
+/// him and he bursts into his gibs.
 /// </summary>
 public sealed class Terry : Component
 {
@@ -12,10 +15,19 @@ public sealed class Terry : Component
 
 	[Property] public Model BodyModel { get; set; }
 
-	/// <summary>Constant velocity Terry travels at, in units/second. Set by the spawner.</summary>
+	/// <summary>Current velocity in units/second. Set by the spawner as the launch velocity.</summary>
 	[Property] public Vector3 Velocity { get; set; }
 
-	/// <summary>Seconds Terry lives before despawning if he's never clicked (once he's off-screen).</summary>
+	/// <summary>Downward acceleration applied each frame, in units/second².</summary>
+	[Property] public float Gravity { get; set; } = 800f;
+
+	/// <summary>Height Terry was launched from; he despawns once he falls back to it.</summary>
+	[Property] public float GroundZ { get; set; }
+
+	/// <summary>Ground speed fed to the run animation, in units/second.</summary>
+	[Property] public float RunSpeed { get; set; } = 160f;
+
+	/// <summary>Backstop lifetime in case Terry never lands (e.g. launched oddly).</summary>
 	[Property] public float Lifetime { get; set; } = 6f;
 
 	/// <summary>How hard the gibs are flung apart when Terry is killed.</summary>
@@ -36,6 +48,7 @@ public sealed class Terry : Component
 		"models/citizen_gibs/models/intestine_gib.vmdl",
 	};
 
+	CitizenAnimationHelper _anim;
 	TimeUntil _despawn;
 
 	protected override void OnStart()
@@ -51,6 +64,11 @@ public sealed class Terry : Component
 		var renderer = visual.AddComponent<SkinnedModelRenderer>();
 		renderer.Model = model;
 
+		// Drive the citizen animgraph so Terry runs his legs while sailing through the air.
+		_anim = visual.AddComponent<CitizenAnimationHelper>();
+		_anim.Target = renderer;
+		_anim.IsGrounded = true; // play the grounded run cycle rather than a falling pose
+
 		// A capsule roughly the size of a citizen so the crosshair trace has something
 		// to hit. The collider's GameObject inherits the "terry" tag from the trace's
 		// point of view via GetComponentInParent, so it can live on a child.
@@ -64,11 +82,19 @@ public sealed class Terry : Component
 
 	protected override void OnUpdate()
 	{
-		// Cruise across the screen at the velocity the spawner handed us.
+		// Ballistic flight: gravity pulls the velocity down, then we integrate position.
+		Velocity += Vector3.Down * Gravity * Time.Delta;
 		WorldPosition += Velocity * Time.Delta;
 
-		// Once he's slid off-screen (or just hung around too long), clean him up.
-		if ( _despawn )
+		// Face the way he's flying and run his legs at that pace.
+		var horizontal = Velocity.WithZ( 0 );
+		if ( horizontal.Length > 1f )
+			WorldRotation = Rotation.LookAt( horizontal.Normal, Vector3.Up );
+
+		_anim?.WithVelocity( WorldRotation.Forward * RunSpeed );
+
+		// Despawn once he's arced back down to where he launched (or the backstop fires).
+		if ( (Velocity.z < 0f && WorldPosition.z <= GroundZ) || _despawn )
 			GameObject.Destroy();
 	}
 
@@ -102,7 +128,7 @@ public sealed class Terry : Component
 				continue;
 
 			// Fling each chunk out in a random direction with an upward kick, carrying
-			// over Terry's travel so the explosion drifts the way he was moving.
+			// over Terry's flight so the explosion drifts the way he was moving.
 			var dir = Rotation.FromYaw( Random.Shared.Float( 0, 360 ) ).Forward;
 			body.Velocity = Velocity + dir * GibForce + Vector3.Up * Random.Shared.Float( 0.4f, 0.9f ) * GibForce;
 			body.AngularVelocity = Vector3.Random * 20f;

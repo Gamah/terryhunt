@@ -3,9 +3,10 @@ namespace TerryHunt;
 /// <summary>
 /// Bootstraps the dynamic part of the game in code. The scene file owns the static
 /// stuff (lighting, skybox, floor, camera); on start this drops the local player into
-/// the world in first person and then keeps launching Terrys across the view, alternating
-/// left-to-right and right-to-left every <see cref="SpawnInterval"/> seconds. It also owns
-/// the score and paints the counter at the top of the screen.
+/// the world in first person and then keeps launching Terrys into the air every
+/// <see cref="SpawnInterval"/> seconds, lobbing them ballistically from alternating sides
+/// so they arc across the view. It also owns the score and paints the counter at the top
+/// of the screen.
 ///
 /// Spawned objects are flagged NotSaved so an accidental editor save never bakes
 /// runtime objects into the .scene.
@@ -15,17 +16,20 @@ public sealed class GameManager : Component
 	/// <summary>Seconds between Terry launches.</summary>
 	[Property] public float SpawnInterval { get; set; } = 1.5f;
 
-	/// <summary>How far in front of the player the Terrys cross.</summary>
+	/// <summary>How far in front of the player the Terrys are lobbed across.</summary>
 	[Property] public float SpawnDistance { get; set; } = 200f;
 
-	/// <summary>How far to each side of centre a Terry travels before despawning.</summary>
-	[Property] public float CrossRange { get; set; } = 280f;
+	/// <summary>How far out to each side a Terry is launched from.</summary>
+	[Property] public float CrossRange { get; set; } = 260f;
 
-	/// <summary>How fast a Terry slides across the view, in units/second.</summary>
-	[Property] public float CrossSpeed { get; set; } = 220f;
+	/// <summary>Sideways launch speed carrying a Terry across the view, in units/second.</summary>
+	[Property] public float CrossSpeed { get; set; } = 200f;
 
-	/// <summary>Height above the floor the Terrys are launched at.</summary>
-	[Property] public float SpawnHeight { get; set; } = 48f;
+	/// <summary>Upward launch speed that lobs a Terry into the air, in units/second.</summary>
+	[Property] public float LaunchUpSpeed { get; set; } = 450f;
+
+	/// <summary>Downward acceleration applied to airborne Terrys, in units/second².</summary>
+	[Property] public float Gravity { get; set; } = 800f;
 
 	/// <summary>How many Terrys the player has clicked.</summary>
 	public int Score { get; private set; }
@@ -76,25 +80,30 @@ public sealed class GameManager : Component
 		var forward = rot.Forward.WithZ( 0 ).Normal;
 		var right = rot.Right.WithZ( 0 ).Normal;
 
-		var centre = _player.WorldPosition.WithZ( 0 ) + forward * SpawnDistance + Vector3.Up * SpawnHeight;
+		// Launch from roughly the player's feet height so Terry rises up into view.
+		var floorZ = _player.WorldPosition.z;
+		var centre = _player.WorldPosition.WithZ( floorZ ) + forward * SpawnDistance;
 
 		// Alternate which side we launch from each time.
 		var sign = _fromLeft ? -1f : 1f;
 		_fromLeft = !_fromLeft;
 
 		var start = centre + right * CrossRange * sign;
-		var velocity = right * CrossSpeed * -sign; // head toward the far side
+		// Lob across toward the far side, with an upward kick so he arcs through the air.
+		var velocity = (right * CrossSpeed * -sign) + (Vector3.Up * LaunchUpSpeed);
 
 		var go = new GameObject( true, "Terry" );
 		go.Flags |= GameObjectFlags.NotSaved;
 		go.WorldPosition = start;
-		// Face back toward the player so Terry is staring you down as he slides past.
-		go.WorldRotation = Rotation.LookAt( -forward, Vector3.Up );
+		// Face the direction of travel; Terry re-orients himself as he flies.
+		go.WorldRotation = Rotation.LookAt( right * -sign, Vector3.Up );
 
 		var terry = go.AddComponent<Terry>();
 		terry.Velocity = velocity;
-		// Live just long enough to cross the full span, plus a small margin.
-		terry.Lifetime = (CrossRange * 2f) / CrossSpeed + 1f;
+		terry.Gravity = Gravity;
+		terry.GroundZ = start.z;
+		// Backstop slightly longer than the time to arc up and fall back down.
+		terry.Lifetime = (2f * LaunchUpSpeed / Gravity) + 1f;
 	}
 
 	void DrawScore()
