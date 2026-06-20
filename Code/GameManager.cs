@@ -17,16 +17,19 @@ public sealed class GameManager : Component
 	[Property] public float SpawnInterval { get; set; } = 1.5f;
 
 	/// <summary>How far in front of the player the Terrys are lobbed across.</summary>
-	[Property] public float SpawnDistance { get; set; } = 600f;
+	[Property] public float SpawnDistance { get; set; } = 1200f;
 
 	/// <summary>How far out to each side a Terry is launched from.</summary>
 	[Property] public float CrossRange { get; set; } = 260f;
 
 	/// <summary>Sideways launch speed carrying a Terry across the view, in units/second.</summary>
-	[Property] public float CrossSpeed { get; set; } = 600f;
+	[Property] public float CrossSpeed { get; set; } = 1200f;
 
 	/// <summary>Upward launch speed that lobs a Terry into the air, in units/second.</summary>
-	[Property] public float LaunchUpSpeed { get; set; } = 1350f;
+	[Property] public float LaunchUpSpeed { get; set; } = 2000f;
+
+	/// <summary>How much to randomize each launch vector, skeet-style (0 = identical lobs).</summary>
+	[Property, Range( 0f, 1f )] public float LaunchSpread { get; set; } = 0.3f;
 
 	/// <summary>Downward acceleration applied to airborne Terrys, in units/second².</summary>
 	[Property] public float Gravity { get; set; } = 800f;
@@ -92,21 +95,29 @@ public sealed class GameManager : Component
 		_fromLeft = !_fromLeft;
 
 		var start = centre + right * CrossRange * sign;
+
+		// Skeet-style randomness: jitter each launch's speeds and add a little depth so no
+		// two Terrys fly quite the same arc.
+		float Vary() => 1f + Random.Shared.Float( -LaunchSpread, LaunchSpread );
+		var upSpeed = LaunchUpSpeed * Vary();
+		var crossSpeed = CrossSpeed * Vary();
+		var depthSpeed = CrossSpeed * Random.Shared.Float( -LaunchSpread, LaunchSpread );
+
 		// Lob across toward the far side, with an upward kick so he arcs through the air.
-		var velocity = (right * CrossSpeed * -sign) + (Vector3.Up * LaunchUpSpeed);
+		var velocity = (right * crossSpeed * -sign) + (Vector3.Up * upSpeed) + (forward * depthSpeed);
 
 		var go = new GameObject( true, "Terry" );
 		go.Flags |= GameObjectFlags.NotSaved;
 		go.WorldPosition = start;
 		// Face the direction of travel; Terry re-orients himself as he flies.
-		go.WorldRotation = Rotation.LookAt( right * -sign, Vector3.Up );
+		go.WorldRotation = Rotation.LookAt( velocity.WithZ( 0 ).Normal, Vector3.Up );
 
 		var terry = go.AddComponent<Terry>();
 		terry.Velocity = velocity;
 		terry.Gravity = Gravity;
 		terry.GroundZ = start.z;
 		// Live through the full arc (up and back down) plus a stretch of ground running.
-		terry.Lifetime = (2f * LaunchUpSpeed / Gravity) + RunDuration;
+		terry.Lifetime = (2f * upSpeed / Gravity) + RunDuration;
 	}
 
 	void DrawScore()
