@@ -42,8 +42,12 @@ public sealed class TerryHunter : Component
 			return;
 
 		var terry = tr.GameObject.GetComponentInParent<Terry>();
-		if ( terry is not null )
-			terry.GameObject.Destroy();
+		if ( terry is null )
+			return;
+
+		// Score the hit, then burst Terry into his gibs.
+		Scene.GetAllComponents<GameManager>().FirstOrDefault()?.AddScore();
+		terry.Explode();
 	}
 
 	void DrawCrosshair()
