@@ -17,7 +17,7 @@ public sealed class GameManager : Component
 	[Property] public float SpawnInterval { get; set; } = 1.5f;
 
 	/// <summary>How far in front of the player the Terrys are lobbed across.</summary>
-	[Property] public float SpawnDistance { get; set; } = 1200f;
+	[Property] public float SpawnDistance { get; set; } = 3000f;
 
 	/// <summary>How far out to each side a Terry is launched from.</summary>
 	[Property] public float CrossRange { get; set; } = 260f;
@@ -97,8 +97,9 @@ public sealed class GameManager : Component
 		var start = centre + right * CrossRange * sign;
 
 		// Skeet-style randomness: jitter each launch's speeds and add a little depth so no
-		// two Terrys fly quite the same arc.
-		float Vary() => 1f + Random.Shared.Float( -LaunchSpread, LaunchSpread );
+		// two Terrys fly quite the same arc. Variance only adds force, so the base speeds are
+		// the floor — never weaker, only stronger.
+		float Vary() => 1f + Random.Shared.Float( 0f, LaunchSpread );
 		var upSpeed = LaunchUpSpeed * Vary();
 		var crossSpeed = CrossSpeed * Vary();
 		var depthSpeed = CrossSpeed * Random.Shared.Float( -LaunchSpread, LaunchSpread );
