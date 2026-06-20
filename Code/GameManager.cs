@@ -82,15 +82,13 @@ public sealed class GameManager : Component
 
 	void LaunchTerry()
 	{
-		// Spawn out along where the player is actually looking, not the body's facing —
-		// the camera drives the first-person view, so its forward is the player's facing.
-		var rot = Scene.Camera?.WorldRotation ?? _player.WorldRotation;
-		var forward = rot.Forward.WithZ( 0 ).Normal;
-		var right = rot.Right.WithZ( 0 ).Normal;
+		// Fixed world-space launch line out in front of the arena. The player's position
+		// and facing don't affect where Terrys spawn — they always come from the same place.
+		var forward = Vector3.Forward;
+		var right = Vector3.Right;
 
-		// Launch from roughly the player's feet height so Terry rises up into view.
-		var floorZ = _player.WorldPosition.z;
-		var centre = _player.WorldPosition.WithZ( floorZ ) + forward * SpawnDistance;
+		// Launch from the floor so Terry rises up into view.
+		var centre = forward * SpawnDistance;
 
 		// Alternate which side we launch from each time.
 		var sign = _fromLeft ? -1f : 1f;
