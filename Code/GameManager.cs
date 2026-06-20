@@ -17,19 +17,22 @@ public sealed class GameManager : Component
 	[Property] public float SpawnInterval { get; set; } = 1.5f;
 
 	/// <summary>How far in front of the player the Terrys are lobbed across.</summary>
-	[Property] public float SpawnDistance { get; set; } = 200f;
+	[Property] public float SpawnDistance { get; set; } = 600f;
 
 	/// <summary>How far out to each side a Terry is launched from.</summary>
 	[Property] public float CrossRange { get; set; } = 260f;
 
 	/// <summary>Sideways launch speed carrying a Terry across the view, in units/second.</summary>
-	[Property] public float CrossSpeed { get; set; } = 200f;
+	[Property] public float CrossSpeed { get; set; } = 600f;
 
 	/// <summary>Upward launch speed that lobs a Terry into the air, in units/second.</summary>
-	[Property] public float LaunchUpSpeed { get; set; } = 450f;
+	[Property] public float LaunchUpSpeed { get; set; } = 1350f;
 
 	/// <summary>Downward acceleration applied to airborne Terrys, in units/second².</summary>
 	[Property] public float Gravity { get; set; } = 800f;
+
+	/// <summary>Seconds a Terry keeps running along the ground after landing before despawning.</summary>
+	[Property] public float RunDuration { get; set; } = 4f;
 
 	/// <summary>How many Terrys the player has clicked.</summary>
 	public int Score { get; private set; }
@@ -102,8 +105,8 @@ public sealed class GameManager : Component
 		terry.Velocity = velocity;
 		terry.Gravity = Gravity;
 		terry.GroundZ = start.z;
-		// Backstop slightly longer than the time to arc up and fall back down.
-		terry.Lifetime = (2f * LaunchUpSpeed / Gravity) + 1f;
+		// Live through the full arc (up and back down) plus a stretch of ground running.
+		terry.Lifetime = (2f * LaunchUpSpeed / Gravity) + RunDuration;
 	}
 
 	void DrawScore()

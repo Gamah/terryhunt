@@ -50,6 +50,7 @@ public sealed class Terry : Component
 
 	CitizenAnimationHelper _anim;
 	TimeUntil _despawn;
+	bool _landed;
 
 	protected override void OnStart()
 	{
@@ -82,19 +83,35 @@ public sealed class Terry : Component
 
 	protected override void OnUpdate()
 	{
-		// Ballistic flight: gravity pulls the velocity down, then we integrate position.
-		Velocity += Vector3.Down * Gravity * Time.Delta;
-		WorldPosition += Velocity * Time.Delta;
+		if ( !_landed )
+		{
+			// Ballistic flight: gravity pulls the velocity down, then we integrate position.
+			Velocity += Vector3.Down * Gravity * Time.Delta;
+			WorldPosition += Velocity * Time.Delta;
 
-		// Face the way he's flying and run his legs at that pace.
+			// Touch down: stick to the ground and keep only the horizontal run.
+			if ( Velocity.z < 0f && WorldPosition.z <= GroundZ )
+			{
+				_landed = true;
+				WorldPosition = WorldPosition.WithZ( GroundZ );
+				Velocity = Velocity.WithZ( 0f );
+			}
+		}
+		else
+		{
+			// Grounded: keep running along the floor.
+			WorldPosition += Velocity * Time.Delta;
+		}
+
+		// Face the way he's moving and run his legs at that pace.
 		var horizontal = Velocity.WithZ( 0 );
 		if ( horizontal.Length > 1f )
 			WorldRotation = Rotation.LookAt( horizontal.Normal, Vector3.Up );
 
 		_anim?.WithVelocity( WorldRotation.Forward * RunSpeed );
 
-		// Despawn once he's arced back down to where he launched (or the backstop fires).
-		if ( (Velocity.z < 0f && WorldPosition.z <= GroundZ) || _despawn )
+		// Only despawn once his time is up — he gets to land and run for a while first.
+		if ( _despawn )
 			GameObject.Destroy();
 	}
 
