@@ -82,7 +82,9 @@ public sealed class GameManager : Component
 
 	void LaunchTerry()
 	{
-		var rot = _player.WorldRotation;
+		// Spawn out along where the player is actually looking, not the body's facing —
+		// the camera drives the first-person view, so its forward is the player's facing.
+		var rot = Scene.Camera?.WorldRotation ?? _player.WorldRotation;
 		var forward = rot.Forward.WithZ( 0 ).Normal;
 		var right = rot.Right.WithZ( 0 ).Normal;
 
